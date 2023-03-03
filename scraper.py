@@ -1,29 +1,29 @@
+import os
+import sys
+
 import requests
 from bs4 import BeautifulSoup
 
 
-search_query = "impeachment"
-
-search_url = f"https://www.cartacapital.com.br/?s={search_query}"
-
-response = requests.get(search_url)
-
-soup = BeautifulSoup(response.text, features="html.parser")
-
-links = soup.find_all("a")
 
 
-news_pages = []
+def get_news_urls(search_url):
+    response = requests.get(search_url)
+    if response.status_code != 200:
+        response.raise_for_status()
+    soup = BeautifulSoup(response.text, features="html.parser")
+    news_links = []
+    for element in soup.find_all("a"):
+        if "https://www.cartacapital.com.br/" not in element["href"]:
+            continue
+        if element.find("h2") is not None:
+            news_links.append(element["href"])
+    return news_links
 
-for link in links:
-    if "https://www.cartacapital.com.br/" in link["href"]:
-        # print(link["href"])
-        title = link.find("h2")
-        if title is not None:
-            news_pages.append(link["href"])
 
 
-for news_url in news_pages:
+
+def get_news_content(news_url):
     response = requests.get(news_url)
     soup = BeautifulSoup(response.text, features="html.parser")
     content_open_div = soup.find("div", {"class": "contentOpen"})
@@ -32,9 +32,25 @@ for news_url in news_pages:
     news_content = []
     for tag in p_tags:
         news_content.append("".join(tag.decode_contents()))
-    with open("news/" + news_url.split("/")[-2], "w") as new_file:
-        new_file.write("\n".join(news_content))
+    return "\n".join(news_content)
+
+
+
+
 
 # TODO: visitar outras paginas da busca
 # https://www.cartacapital.com.br/page/2/?s=impeachment
+
+
+search_query = sys.argv[1].replace(" ", "+")
+
+for i in range(1, 29):
+    search_url = f"https://www.cartacapital.com.br/page/{i}/?s={search_query}"
+    news_urls = get_news_urls(search_url)
+
+    for news_url in news_urls:
+        news_content = get_news_content(news_url)
+        news_filename = os.path.join("news", news_url.split("/")[-2])
+        with open(news_filename, "w") as new_file:
+            new_file.write(news_content)
 
