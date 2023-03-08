@@ -5,8 +5,6 @@ import requests
 from bs4 import BeautifulSoup
 
 
-
-
 def get_news_urls(search_url):
     response = requests.get(search_url)
     if response.status_code != 200:
@@ -20,9 +18,6 @@ def get_news_urls(search_url):
             news_links.append(element["href"])
     return news_links
 
-
-
-
 def get_news_content(news_url):
     response = requests.get(news_url)
     soup = BeautifulSoup(response.text, features="html.parser")
@@ -34,23 +29,17 @@ def get_news_content(news_url):
         news_content.append("".join(tag.decode_contents()))
     return "\n".join(news_content)
 
-
-
-
-
-# TODO: visitar outras paginas da busca
-# https://www.cartacapital.com.br/page/2/?s=impeachment
-
-
 search_query = sys.argv[1].replace(" ", "+")
 
-for i in range(1, 29):
+for i in range(1,1000000):
     search_url = f"https://www.cartacapital.com.br/page/{i}/?s={search_query}"
-    news_urls = get_news_urls(search_url)
+    try:
+        news_urls = get_news_urls(search_url)
+    except requests.exceptions.HTTPError:
+        break
 
     for news_url in news_urls:
         news_content = get_news_content(news_url)
         news_filename = os.path.join("news", news_url.split("/")[-2])
         with open(news_filename, "w") as new_file:
             new_file.write(news_content)
-
